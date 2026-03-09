@@ -201,6 +201,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [filterManager, setFilterManager] = useState("전체");
   const [showDrop, setShowDrop] = useState(false);
+  const [filterTeam, setFilterTeam] = useState("전체");
   const [selected, setSelected] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -228,12 +229,16 @@ export default function Dashboard() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const isOutsourced = (d) => d.desc && d.desc.includes("외주");
   const managers = ["전체", ...Array.from(new Set(data.map(d => d.manager).filter(Boolean)))];
 
   const filtered = data.filter(d => {
     if (!showDrop && d.stage === "드롭") return false;
     if (filterManager !== "전체" && d.manager !== filterManager) return false;
     if (search && !d.name.includes(search) && !d.desc.includes(search)) return false;
+    if (filterTeam === "크리팀") return TEAM_STAGES.cri.includes(d.stage) || (TEAM_STAGES.workshop.includes(d.stage) && isOutsourced(d));
+    if (filterTeam === "세공실") return TEAM_STAGES.workshop.includes(d.stage) && !isOutsourced(d);
+    if (filterTeam === "운영팀") return TEAM_STAGES.ops.includes(d.stage);
     return true;
   });
 
@@ -242,7 +247,6 @@ export default function Dashboard() {
   filtered.forEach(d => { const k = d.stage || "기타"; if (!grouped[k]) grouped[k] = []; grouped[k].push(d); });
   const activeStages = STAGE_ORDER.filter(s => grouped[s]?.length > 0);
 
-  const isOutsourced  = (d) => d.desc && d.desc.includes("외주");
   const criCount      = data.filter(d => TEAM_STAGES.cri.includes(d.stage) || (TEAM_STAGES.workshop.includes(d.stage) && isOutsourced(d))).length;
   const workshopCount = data.filter(d => TEAM_STAGES.workshop.includes(d.stage) && !isOutsourced(d)).length;
   const opsCount      = data.filter(d => TEAM_STAGES.ops.includes(d.stage)).length;
@@ -251,11 +255,11 @@ export default function Dashboard() {
   const today = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
 
   const statCards = [
-    { label: "✏️ 크리팀", value: criCount, color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", sub: "캐드 · 출력 · 은샘플테스트" },
-    { label: "🔧 세공실", value: workshopCount, color: "#9333ea", bg: "#faf5ff", border: "#e9d5ff", sub: "은샘플제작 · 원본 · 최종샘플" },
-    { label: "🏪 운영팀", value: opsCount, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", sub: "최종완료 · 매장준비 · 출시" },
-    { label: "📄 상세 대기", value: data.filter(d => d.desc.includes("상세페이지 대기")).length, color: "#d97706", bg: "#fffbeb", border: "#fde68a", sub: "콘텐츠팀 액션 필요" },
-    ...(urgent.length > 0 ? [{ label: "⚠️ 미업데이트", value: urgent.length, color: "#dc2626", bg: "#fef2f2", border: "#fecaca", sub: "7일 이상 변동 없음" }] : []),
+    { label: "✏️ 크리팀", value: criCount, color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", sub: "캐드 · 출력 · 은샘플테스트", teamKey: "크리팀" },
+    { label: "🔧 세공실", value: workshopCount, color: "#9333ea", bg: "#faf5ff", border: "#e9d5ff", sub: "은샘플제작 · 원본 · 최종샘플", teamKey: "세공실" },
+    { label: "🏪 운영팀", value: opsCount, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", sub: "최종완료 · 매장준비 · 출시", teamKey: "운영팀" },
+    { label: "📄 상세 대기", value: data.filter(d => d.desc.includes("상세페이지 대기")).length, color: "#d97706", bg: "#fffbeb", border: "#fde68a", sub: "콘텐츠팀 액션 필요", teamKey: null },
+    ...(urgent.length > 0 ? [{ label: "⚠️ 미업데이트", value: urgent.length, color: "#dc2626", bg: "#fef2f2", border: "#fecaca", sub: "7일 이상 변동 없음", teamKey: null }] : []),
   ];
 
   return (
@@ -291,13 +295,19 @@ export default function Dashboard() {
         {!loading && (
           <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px" }}>
             <div className="stat-grid" style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-              {statCards.map(s => (
-                <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: s.color, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 9, color: s.color + "99", marginTop: 3, lineHeight: 1.3 }}>{s.sub}</div>
-                </div>
-              ))}
+              {statCards.map(s => {
+                const isActive = filterTeam === s.teamKey;
+                const clickable = !!s.teamKey;
+                return (
+                  <div key={s.label}
+                    onClick={() => clickable && setFilterTeam(isActive ? "전체" : s.teamKey)}
+                    style={{ background: isActive ? s.color : s.bg, border: `2px solid ${isActive ? s.color : s.border}`, borderRadius: 10, padding: "10px 12px", cursor: clickable ? "pointer" : "default", transition: "all 0.15s", boxShadow: isActive ? `0 4px 12px ${s.color}40` : "none" }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: isActive ? "#fff" : s.color, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: isActive ? "#fff" : s.color, lineHeight: 1 }}>{s.value}</div>
+                    <div style={{ fontSize: 9, color: isActive ? "rgba(255,255,255,0.7)" : s.color + "99", marginTop: 3, lineHeight: 1.3 }}>{isActive ? "클릭해서 해제" : s.sub}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
