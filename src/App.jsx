@@ -254,7 +254,10 @@ export default function Dashboard() {
   const detailWaiting = filtered.filter(d => d.desc.includes("상세페이지 대기"));
   const today = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
 
+  const totalActive = data.filter(d => !["드롭","아이데이션"].includes(d.stage)).length;
+
   const statCards = [
+    { label: "📦 전체", value: totalActive, color: "#374151", bg: "#f9fafb", border: "#e5e7eb", sub: "진행중 전체", teamKey: "전체" },
     { label: "✏️ 크리팀", value: criCount, color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", sub: "캐드 · 출력 · 은샘플테스트", teamKey: "크리팀" },
     { label: "🔧 세공실", value: workshopCount, color: "#9333ea", bg: "#faf5ff", border: "#e9d5ff", sub: "은샘플제작 · 원본 · 최종샘플", teamKey: "세공실" },
     { label: "🏪 운영팀", value: opsCount, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", sub: "최종완료 · 매장준비 · 출시", teamKey: "운영팀" },
@@ -294,13 +297,13 @@ export default function Dashboard() {
         {/* 통계 카드 */}
         {!loading && (
           <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px" }}>
-            <div className="stat-grid" style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+            <div className="stat-grid" style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
               {statCards.map(s => {
                 const isActive = filterTeam === s.teamKey;
                 const clickable = !!s.teamKey;
                 return (
                   <div key={s.label}
-                    onClick={() => clickable && setFilterTeam(isActive ? "전체" : s.teamKey)}
+                    onClick={() => { if (!clickable) return; setFilterTeam(s.teamKey === "전체" || isActive ? "전체" : s.teamKey); }}
                     style={{ background: isActive ? s.color : s.bg, border: `2px solid ${isActive ? s.color : s.border}`, borderRadius: 10, padding: "10px 12px", cursor: clickable ? "pointer" : "default", transition: "all 0.15s", boxShadow: isActive ? `0 4px 12px ${s.color}40` : "none" }}>
                     <div style={{ fontSize: 9, fontWeight: 800, color: isActive ? "#fff" : s.color, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{s.label}</div>
                     <div style={{ fontSize: 24, fontWeight: 900, color: isActive ? "#fff" : s.color, lineHeight: 1 }}>{s.value}</div>
