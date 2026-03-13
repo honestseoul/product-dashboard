@@ -209,10 +209,9 @@ export default function Dashboard() {
   async function fetchData() {
     setLoading(true);
     try {
-      const res = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+      const res = await fetch("/api/notion", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${NOTION_TOKEN}`, "Notion-Version": "2022-06-28", "Content-Type": "application/json" },
-        body: JSON.stringify({ page_size: 100 }),
+        headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error();
       const json = await res.json();
